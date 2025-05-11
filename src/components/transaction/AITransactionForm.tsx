@@ -42,7 +42,7 @@ const AITransactionForm: React.FC<AITransactionFormProps> = ({
         setIsLoading(true);
         
         const categoryService = new CategoryService();
-        const currencyService = new CurrencyService();
+        const currencyService = new CurrencyService(true);
         const paymentMethodService = new PaymentMethodService(true);
         
         try {
@@ -240,22 +240,16 @@ const AITransactionForm: React.FC<AITransactionFormProps> = ({
       setError(null);
       
       const aiService = new AIService();
-      const contextData = {
-        categories: categories.map(c => ({ id: c.id, name: c.name })),
-        paymentMethods: paymentMethods.map(p => ({ id: p.id, name: p.name })),
-        currencies: currencies.map(c => ({ id: c.id, name: c.name }))
-      };
       
       let response;
       
       if (file) {
         // Procesar con imagen
-        response = await aiService.processTransactionImage(file, contextData);
+        response = await aiService.processTransactionImage(file);
       } else if (message) {
         // Procesar con mensaje de texto
         response = await aiService.processTransactionText({
-          message,
-          contextData
+          message
         });
       } else {
         throw new Error('Debes proporcionar un mensaje o una imagen');

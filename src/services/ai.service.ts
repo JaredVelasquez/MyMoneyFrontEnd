@@ -1,6 +1,10 @@
 import ApiService from './api.service';
 import type { AxiosResponse } from 'axios';
 import type { AIRequestData, AITransactionResponse } from './openai.service';
+import { CategoryService } from './category.service';
+import { CurrencyService } from './currency.service';
+import { PaymentMethodService } from './paymentMethod.service';
+import type { Category, Currency, PaymentMethod } from '../types';
 
 export class AIService extends ApiService {
   constructor() {
@@ -13,6 +17,12 @@ export class AIService extends ApiService {
   public async processTransactionText(data: AIRequestData): Promise<AxiosResponse<AITransactionResponse>> {
     try {
       console.log('AIService - Procesando transacción con texto:', data.message);
+      
+      // Si no hay datos de contexto disponibles, intentamos obtenerlos
+      if (!data.contextData || Object.keys(data.contextData).length === 0) {
+        const contextData = await this.fetchContextData();
+        data.contextData = contextData;
+      }
       
       // Procesar directamente con OpenAI
       const contextString = this.buildContextString(data.contextData);
@@ -38,6 +48,11 @@ export class AIService extends ApiService {
     try {
       console.log('AIService - Procesando transacción con imagen');
       
+      // Si no hay datos de contexto disponibles, intentamos obtenerlos
+      if (!contextData || Object.keys(contextData).length === 0) {
+        contextData = await this.fetchContextData();
+      }
+      
       // Procesar directamente con OpenAI
       const contextString = this.buildContextString(contextData);
       const response = await this.processImageWithOpenAI(image, contextString);
@@ -52,6 +67,51 @@ export class AIService extends ApiService {
     } catch (error) {
       console.error('AIService - Error al procesar transacción con IA (imagen):', error);
       throw error;
+    }
+  }
+
+  /**
+   * Fetch context data from services
+   */
+  private async fetchContextData(): Promise<AIRequestData['contextData']> {
+    try {
+      // Usar servicios con modo simulado
+      const categoryService = new CategoryService();
+      const currencyService = new CurrencyService(true);
+      const paymentMethodService = new PaymentMethodService(true);
+      
+      let categories: { id: string; name: string }[] = [];
+      let currencies: { id: string; name: string }[] = [];
+      let paymentMethods: { id: string; name: string }[] = [];
+      
+      try {
+        // Intentar cargar categorías
+        const categoriesResponse = await categoryService.getAll();
+        categories = categoriesResponse.data.map((c: Category) => ({ id: c.id, name: c.name }));
+      } catch (err) {
+        console.error('Error al cargar categorías en AIService:', err);
+      }
+      
+      try {
+        // Intentar cargar monedas (con modo simulado)
+        const currenciesResponse = await currencyService.getAll();
+        currencies = currenciesResponse.data.map((c: Currency) => ({ id: c.id, name: c.name }));
+      } catch (err) {
+        console.error('Error al cargar monedas en AIService:', err);
+      }
+      
+      try {
+        // Intentar cargar métodos de pago (con modo simulado)
+        const paymentMethodsResponse = await paymentMethodService.getAll();
+        paymentMethods = paymentMethodsResponse.data.map((p: PaymentMethod) => ({ id: p.id, name: p.name }));
+      } catch (err) {
+        console.error('Error al cargar métodos de pago en AIService:', err);
+      }
+      
+      return { categories, currencies, paymentMethods };
+    } catch (error) {
+      console.error('Error al cargar datos de contexto en AIService:', error);
+      return { categories: [], currencies: [], paymentMethods: [] };
     }
   }
 

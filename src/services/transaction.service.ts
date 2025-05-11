@@ -24,7 +24,7 @@ export class TransactionService extends ApiService {
   private readonly baseEndpoint = '/transactions';
   private simulateMode = false;
 
-  constructor(simulateMode = false) {
+  constructor(simulateMode = true) {
     super();
     this.simulateMode = simulateMode;
   }
